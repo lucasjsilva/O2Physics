@@ -225,9 +225,9 @@ struct StudyPnch {
   bool isTrackSelected(CheckTrack const& track)
   {
     if (isApplyDCAcustomcuts) {
-      if (std::abs(track.dcaXY()) > cDcaxyP0 + cDcaxyP1 / pow(track.pt(), cDcaxyP2))
+      if (std::abs(track.dcaXY()) > cDcaxyP0 + cDcaxyP1 / std::pow(track.pt(), cDcaxyP2))
         return false;
-      if (std::abs(track.dcaZ()) > cDcazP0 + cDcazP1 / pow(track.pt(), cDcazP2))
+      if (std::abs(track.dcaZ()) > cDcazP0 + cDcazP1 / std::pow(track.pt(), cDcazP2))
         return false;
     }
     if (std::abs(track.eta()) >= etaRange) {
