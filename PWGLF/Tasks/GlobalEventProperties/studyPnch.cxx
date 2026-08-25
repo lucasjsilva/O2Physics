@@ -147,6 +147,7 @@ struct StudyPnch {
     }
     if (doprocessData) {
       histos.add("hMultiplicityData", "hMultiplicityData", kTH1F, {axisMult}, true);
+      histos.add("hMultiplicityDataINELgt0", "hMultiplicityDataINELgt0", kTH1F, {axisMult}, true);
     }
     if (doprocessCorrelation) {
       histos.add("GlobalMult_vs_FT0A", "GlobalMult_vs_FT0A", kTH2F, {axisMult, axisFt0aMult}, true);
@@ -224,6 +225,18 @@ struct StudyPnch {
     return true;
   }
 
+  template <typename CheckInelgt0>
+  bool isInegt0Selected(CheckInelgt0 const& track)
+  {
+    if (!isApplyInelgt0) {
+      return false;
+    }
+    if (std::abs(track.eta()) >= 1.0f) {
+      return false;
+    }
+    return true;
+  }
+
   template <typename CheckGenTrack>
   bool isGenTrackSelected(CheckGenTrack const& track)
   {
@@ -268,6 +281,27 @@ struct StudyPnch {
       nTrk++;
     }
     return nTrk;
+  }
+
+  template <typename countTrk>
+  int countINELTracks(countTrk const& tracks)
+  {
+    auto nTrkinel = 0;
+    for (const auto& track : tracks) {
+      if (!isInegt0Selected(track)) {
+        continue;
+      }
+      if (isApplyPhiSelection && (track.phi() < minPhi || track.phi() > maxPhi)) {
+        continue;
+      }
+      histos.fill(HIST("hdcaxy"), track.dcaXY());
+      histos.fill(HIST("hdcaz"), track.dcaZ());
+      histos.fill(HIST("EtaHist"), track.eta());
+      histos.fill(HIST("PhiHist"), track.phi());
+      histos.fill(HIST("PhiVsEtaHist"), track.phi(), track.eta());
+      nTrkinel++;
+    }
+    return nTrkinel;
   }
 
   template <typename countTrk, typename McColType>
@@ -401,8 +435,9 @@ struct StudyPnch {
       return;
     }
     auto mult = countNTracks(tracks);
-    if (isApplyInelgt0 && etaRange == 1.0f) {
-      if (mult > 0) {
+    auto multINELgt0 = countINELTracks(tracks);
+    if (isApplyInelgt0) {
+      if (multINELgt0 > 0) {
         histos.fill(HIST("hMultiplicityData"), mult);
       }
     } else {
@@ -428,7 +463,6 @@ struct StudyPnch {
     if (isApplyInelgt0 && !mcCollision.isInelGt0()) {
       return;
     }
-
     for (const auto& RecCol : RecCols) {
       if (!isEventSelected(RecCol)) {
         continue;
@@ -444,14 +478,6 @@ struct StudyPnch {
       auto multrec = countNTracksMcCol(recTracksPart, RecCol);
       float multgen = countGenTracks(GenParticles, RecCol);
       float nTrkPtCut = countTracksPtCut(GenParticles, RecCol);
-      if (isApplyInelgt0 && etaRange == 1.0f) {
-        if (multrec == 0 || multgen == 0) {
-          if (nTrkPtCut == 0) {
-            continue;
-          }
-          continue;
-        }
-      }
       histos.fill(HIST("hMultiplicityMCrec"), multrec);
       if (cPrint) {
         LOG(info) << "Generated Particles with standard pT:" << multgen;
@@ -493,13 +519,7 @@ struct StudyPnch {
       }
       nTrk_multAll++;
     }
-    if (isApplyInelgt0 && etaRange == 1.0f) {
-      if (nTrk_multAll > 0) {
-        histos.fill(HIST("hMultiplicityMCgenAll"), nTrk_multAll);
-      }
-    } else {
-      histos.fill(HIST("hMultiplicityMCgenAll"), nTrk_multAll);
-    }
+    histos.fill(HIST("hMultiplicityMCgenAll"), nTrk_multAll);
 
     bool atLeastOne = false;
     auto numcontributors = -999;
@@ -524,13 +544,7 @@ struct StudyPnch {
         }
         nTrk_multSel++;
       }
-      if (isApplyInelgt0 && etaRange == 1.0f) {
-        if (nTrk_multSel > 0) {
-          histos.fill(HIST("hMultiplicityMCgenSel"), nTrk_multSel);
-        }
-      } else {
-        histos.fill(HIST("hMultiplicityMCgenSel"), nTrk_multSel);
-      }
+      histos.fill(HIST("hMultiplicityMCgenSel"), nTrk_multSel);
     }
   }
 
